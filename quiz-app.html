@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuizMaster</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --border: #2a2a3d;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --correct: #10b981;
+    --wrong: #ef4444;
+    --text: #f0f0ff;
+    --muted: #6b7280;
+    --glow: rgba(124, 58, 237, 0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(124,58,237,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(6,182,212,0.06) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 680px;
+    padding: 24px;
+  }
+
+  /* SCREENS */
+  .screen { display: none; animation: fadeUp 0.4s ease forwards; }
+  .screen.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* HEADER */
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--accent2);
+    text-transform: uppercase;
+    margin-bottom: 48px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo::before {
+    content: '';
+    width: 8px; height: 8px;
+    background: var(--accent2);
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 10px var(--accent2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(0.8); }
+  }
+
+  /* HOME SCREEN */
+  .home-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(40px, 8vw, 64px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #f0f0ff 0%, #a78bfa 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .home-sub {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 40px;
+    max-width: 400px;
+  }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .cat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .cat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.02));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .cat-card:hover::before { opacity: 1; }
+  .cat-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 30px var(--glow); }
+  .cat-card.selected { border-color: var(--accent); background: rgba(124,58,237,0.1); box-shadow: 0 0 20px var(--glow); }
+
+  .cat-icon { font-size: 28px; margin-bottom: 10px; }
+  .cat-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .cat-count { font-size: 11px; color: var(--muted); }
+
+  .diff-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .diff-btn:hover { border-color: var(--accent); }
+  .diff-btn.selected { border-color: var(--accent); background: rgba(124,58,237,0.15); color: var(--accent); }
+
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  }
+  .btn-primary:hover { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 8px 25px var(--glow); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* QUIZ SCREEN */
+  .quiz-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+
+  .progress-info { font-size: 12px; color: var(--muted); }
+  .progress-info span { color: var(--text); font-weight: 500; }
+
+  .score-badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .score-badge .score-num { color: var(--accent2); font-weight: 500; }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 999px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 999px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 10px var(--glow);
+  }
+
+  .timer-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+  .timer {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.3s;
+  }
+  .timer.warning { color: #f59e0b; }
+  .timer.danger { color: var(--wrong); animation: timerShake 0.3s infinite; }
+  @keyframes timerShake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+  }
+
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 20px;
+  }
+
+  .q-tag {
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .q-tag::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .question-text {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(17px, 3vw, 22px);
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--text);
+  }
+
+  .options-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .option-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: left;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .option-btn::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--accent); background: rgba(124,58,237,0.05); }
+  .option-btn:hover:not(:disabled)::before { opacity: 1; }
+  .option-btn:disabled { cursor: default; }
+
+  .option-btn.correct { border-color: var(--correct); background: rgba(16,185,129,0.1); }
+  .option-btn.correct::before { background: var(--correct); opacity: 1; }
+  .option-btn.wrong { border-color: var(--wrong); background: rgba(239,68,68,0.1); }
+  .option-btn.wrong::before { background: var(--wrong); opacity: 1; }
+
+  .opt-letter {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .option-btn.correct .opt-letter { background: var(--correct); color: white; }
+  .option-btn.wrong .opt-letter { background: var(--wrong); color: white; }
+
+  .opt-icon {
+    margin-left: auto;
+    font-size: 18px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .option-btn.correct .opt-icon,
+  .option-btn.wrong .opt-icon { opacity: 1; }
+
+  .feedback-bar {
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-top: 12px;
+    display: none;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .feedback-bar.correct { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #34d399; display: block; }
+  .feedback-bar.wrong { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; display: block; }
+
+  .next-btn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 16px;
+    display: none;
+    letter-spacing: 0.05em;
+  }
+  .next-btn.visible { display: block; animation: fadeUp 0.3s ease; }
+  .next-btn:hover { background: var(--accent); color: white; box-shadow: 0 0 20px var(--glow); }
+
+  /* RESULTS SCREEN */
+  .results-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .trophy {
+    font-size: 72px;
+    margin-bottom: 16px;
+    display: block;
+    animation: bounceIn 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes bounceIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .result-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #f0f0ff, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .result-sub { color: var(--muted); font-size: 14px; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent2);
+    margin-bottom: 4px;
+    display: block;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .score-ring {
+    width: 140px; height: 140px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--border); stroke-width: 8; }
+  .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .ring-pct {
+    font-family: 'Syne', sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .ring-label { font-size: 11px; color: var(--muted); }
+
+  .history-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .history-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .history-list { display: flex; flex-direction: column; gap: 6px; }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .history-item:last-child { border-bottom: none; }
+  .h-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .h-dot.c { background: var(--correct); }
+  .h-dot.w { background: var(--wrong); }
+  .h-text { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .h-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .h-badge.c { background: rgba(16,185,129,0.15); color: #34d399; }
+  .h-badge.w { background: rgba(239,68,68,0.1); color: #f87171; }
+
+  .btn-row { display: flex; gap: 10px; }
+  .btn-secondary {
+    flex: 1;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="homeScreen">
+    <div class="logo">QuizMaster</div>
+    <h1 class="home-title">Test your<br>knowledge.</h1>
+    <p class="home-sub">Pick a category, choose your difficulty, and race the clock. Every correct answer counts.</p>
+
+    <div class="category-grid" id="categoryGrid">
+      <div class="cat-card selected" data-cat="general" onclick="selectCat(this)">
+        <div class="cat-icon">🌍</div>
+        <div class="cat-name">General</div>
+        <div class="cat-count">10 questions</div>
+      </div>
+      <div class="cat-card" data-cat="science" onclick="selectCat(this)">
+        <div class="cat-icon">🔬</div>
+        <div class="cat-name">Science</div>
+        <div class="cat-count">10 questions</div>
+      </div>
+      <div class="cat-card" data-cat="history" onclick="selectCat(this)">
+        <div class="cat-icon">📜</div>
+        <div class="cat-name">History</div>
+        <div class="cat-count">10 questions</div>
+      </div>
+      <div class="cat-card" data-cat="tech" onclick="selectCat(this)">
+        <div class="cat-icon">💻</div>
+        <div class="cat-name">Technology</div>
+        <div class="cat-count">10 questions</div>
+      </div>
+    </div>
+
+    <div class="diff-row" id="diffRow">
+      <button class="diff-btn selected" data-diff="easy" onclick="selectDiff(this)">Easy</button>
+      <button class="diff-btn" data-diff="medium" onclick="selectDiff(this)">Medium</button>
+      <button class="diff-btn" data-diff="hard" onclick="selectDiff(this)">Hard</button>
+    </div>
+
+    <button class="btn-primary" onclick="startQuiz()">Start Quiz →</button>
+  </div>
+
+  <!-- QUIZ SCREEN -->
+  <div class="screen" id="quizScreen">
+    <div class="logo">QuizMaster</div>
+    <div class="quiz-header">
+      <div class="progress-info">Question <span id="qNum">1</span> of <span id="qTotal">10</span></div>
+      <div class="score-badge">Score <span class="score-num" id="liveScore">0</span></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:10%"></div></div>
+    <div class="timer-row">
+      <div class="timer" id="timer">⏱ <span id="timerVal">15</span>s</div>
+    </div>
+    <div class="question-card">
+      <div class="q-tag" id="qTag">General · Easy</div>
+      <div class="question-text" id="questionText">Loading question...</div>
+    </div>
+    <div class="options-grid" id="optionsGrid"></div>
+    <div class="feedback-bar" id="feedbackBar"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div class="screen" id="resultsScreen">
+    <div class="logo">QuizMaster</div>
+    <div class="results-header">
+      <span class="trophy" id="trophyEmoji">🏆</span>
+      <div class="result-title" id="resultTitle">Excellent!</div>
+      <div class="result-sub" id="resultSub">You crushed it.</div>
+    </div>
+
+    <div class="score-ring">
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle class="ring-bg" cx="70" cy="70" r="58"/>
+        <circle class="ring-fill" id="ringFill" cx="70" cy="70" r="58"
+          stroke="url(#grad)"
+          stroke-dasharray="364.4"
+          stroke-dashoffset="364.4"/>
+        <defs>
+          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#06b6d4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="ring-text">
+        <div class="ring-pct" id="ringPct">0%</div>
+        <div class="ring-label">Score</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-value" id="statCorrect">0</span>
+        <span class="stat-label">Correct</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="statWrong">0</span>
+        <span class="stat-label">Wrong</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="statTime">0s</span>
+        <span class="stat-label">Avg Time</span>
+      </div>
+    </div>
+
+    <div class="history-section">
+      <div class="history-title">Question Review</div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="showScreen('homeScreen')">← Menu</button>
+      <button class="btn-primary" style="flex:1" onclick="startQuiz()">Play Again</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const QUESTIONS = {
+  general: {
+    easy: [
+      { q: "What is the capital of France?", opts: ["Berlin", "Madrid", "Paris", "Rome"], ans: 2 },
+      { q: "How many continents are there on Earth?", opts: ["5", "6", "7", "8"], ans: 2 },
+      { q: "What color is the sky on a clear day?", opts: ["Green", "Blue", "Red", "Yellow"], ans: 1 },
+      { q: "Which planet is closest to the Sun?", opts: ["Venus", "Earth", "Mars", "Mercury"], ans: 3 },
+      { q: "How many days are in a week?", opts: ["5", "6", "7", "8"], ans: 2 },
+      { q: "What is the largest ocean on Earth?", opts: ["Atlantic", "Indian", "Pacific", "Arctic"], ans: 2 },
+      { q: "Which animal is known as the King of the Jungle?", opts: ["Tiger", "Lion", "Elephant", "Cheetah"], ans: 1 },
+      { q: "How many sides does a triangle have?", opts: ["2", "3", "4", "5"], ans: 1 },
+      { q: "What language do people speak in Brazil?", opts: ["Spanish", "English", "French", "Portuguese"], ans: 3 },
+      { q: "What is the tallest mountain in the world?", opts: ["K2", "Everest", "Kangchenjunga", "Makalu"], ans: 1 },
+    ],
+    medium: [
+      { q: "What is the capital of Australia?", opts: ["Sydney", "Melbourne", "Canberra", "Brisbane"], ans: 2 },
+      { q: "How many bones are in the adult human body?", opts: ["186", "196", "206", "216"], ans: 2 },
+      { q: "Which country invented pizza?", opts: ["France", "Greece", "Spain", "Italy"], ans: 3 },
+      { q: "What is the currency of Japan?", opts: ["Yuan", "Won", "Yen", "Ringgit"], ans: 2 },
+      { q: "Who wrote 'Romeo and Juliet'?", opts: ["Dickens", "Shakespeare", "Austen", "Tolstoy"], ans: 1 },
+      { q: "What is the largest desert in the world?", opts: ["Gobi", "Sahara", "Antarctic", "Arabian"], ans: 2 },
+      { q: "In what year did World War II end?", opts: ["1943", "1944", "1945", "1946"], ans: 2 },
+      { q: "How many strings does a standard guitar have?", opts: ["4", "5", "6", "7"], ans: 2 },
+      { q: "What is the chemical symbol for gold?", opts: ["Go", "Gd", "Au", "Ag"], ans: 2 },
+      { q: "Which country has the most natural lakes?", opts: ["Russia", "USA", "Brazil", "Canada"], ans: 3 },
+    ],
+    hard: [
+      { q: "What is the smallest country in the world by area?", opts: ["Monaco", "San Marino", "Vatican City", "Liechtenstein"], ans: 2 },
+      { q: "In which year was the Magna Carta signed?", opts: ["1215", "1265", "1315", "1415"], ans: 0 },
+      { q: "What is the rarest blood type?", opts: ["O-", "AB+", "AB-", "B-"], ans: 2 },
+      { q: "Which element has the highest melting point?", opts: ["Iron", "Tungsten", "Carbon", "Osmium"], ans: 1 },
+      { q: "How many moons does Neptune have?", opts: ["8", "10", "14", "16"], ans: 2 },
+      { q: "What is the longest river in Europe?", opts: ["Rhine", "Danube", "Volga", "Thames"], ans: 2 },
+      { q: "Who was the first woman to win a Nobel Prize?", opts: ["Rosalind Franklin", "Ada Lovelace", "Marie Curie", "Lise Meitner"], ans: 2 },
+      { q: "What is the most spoken language in the world by native speakers?", opts: ["English", "Spanish", "Hindi", "Mandarin"], ans: 3 },
+      { q: "Which philosopher wrote 'Critique of Pure Reason'?", opts: ["Hume", "Kant", "Nietzsche", "Descartes"], ans: 1 },
+      { q: "What is the speed of light in km/s?", opts: ["200,000", "250,000", "300,000", "350,000"], ans: 2 },
+    ]
+  },
+  science: {
+    easy: [
+      { q: "What gas do plants absorb from the atmosphere?", opts: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], ans: 2 },
+      { q: "What is H₂O commonly known as?", opts: ["Salt", "Water", "Hydrogen", "Acid"], ans: 1 },
+      { q: "How many chambers does the human heart have?", opts: ["2", "3", "4", "5"], ans: 2 },
+      { q: "Which planet is known as the Red Planet?", opts: ["Jupiter", "Saturn", "Venus", "Mars"], ans: 3 },
+      { q: "What force keeps us on the ground?", opts: ["Magnetism", "Friction", "Gravity", "Inertia"], ans: 2 },
+      { q: "What is the powerhouse of the cell?", opts: ["Nucleus", "Ribosome", "Mitochondria", "Cytoplasm"], ans: 2 },
+      { q: "How many teeth does an adult human have?", opts: ["28", "30", "32", "34"], ans: 2 },
+      { q: "What organ pumps blood through the body?", opts: ["Liver", "Lungs", "Brain", "Heart"], ans: 3 },
+      { q: "What is the hardest natural substance on Earth?", opts: ["Gold", "Iron", "Diamond", "Quartz"], ans: 2 },
+      { q: "Which gas makes up the majority of Earth's atmosphere?", opts: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Argon"], ans: 2 },
+    ],
+    medium: [
+      { q: "What is the atomic number of Carbon?", opts: ["4", "6", "8", "12"], ans: 1 },
+      { q: "Which part of the brain controls balance?", opts: ["Cerebrum", "Medulla", "Cerebellum", "Hippocampus"], ans: 2 },
+      { q: "What is the chemical symbol for iron?", opts: ["Ir", "In", "Fe", "Fr"], ans: 2 },
+      { q: "How many chromosomes do humans have?", opts: ["23", "44", "46", "48"], ans: 2 },
+      { q: "What type of bond forms between water molecules?", opts: ["Covalent", "Ionic", "Hydrogen", "Metallic"], ans: 2 },
+      { q: "Which planet has the most moons?", opts: ["Jupiter", "Saturn", "Uranus", "Neptune"], ans: 1 },
+      { q: "What is the SI unit of electric current?", opts: ["Volt", "Watt", "Ohm", "Ampere"], ans: 3 },
+      { q: "What type of rock is formed by volcanic activity?", opts: ["Sedimentary", "Metamorphic", "Igneous", "Limestone"], ans: 2 },
+      { q: "What is the process by which plants make food?", opts: ["Respiration", "Fermentation", "Photosynthesis", "Osmosis"], ans: 2 },
+      { q: "What is the most abundant element in the universe?", opts: ["Helium", "Oxygen", "Carbon", "Hydrogen"], ans: 3 },
+    ],
+    hard: [
+      { q: "What is the Heisenberg Uncertainty Principle about?", opts: ["Speed of light", "Wave-particle duality", "Position and momentum", "Quantum entanglement"], ans: 2 },
+      { q: "How many base pairs are in the human genome?", opts: ["3 million", "30 million", "3 billion", "30 billion"], ans: 2 },
+      { q: "What particle is responsible for the strong nuclear force?", opts: ["Photon", "Gluon", "Higgs boson", "Neutrino"], ans: 1 },
+      { q: "What is the half-life of Carbon-14?", opts: ["570 years", "1,500 years", "5,730 years", "57,300 years"], ans: 2 },
+      { q: "Which enzyme unwinds DNA during replication?", opts: ["Ligase", "Polymerase", "Helicase", "Primase"], ans: 2 },
+      { q: "What is the Schwarzschild radius?", opts: ["Orbital radius", "Event horizon size", "Neutron star size", "Asteroid belt boundary"], ans: 1 },
+      { q: "What is the name of the theoretical boundary of a black hole?", opts: ["Singularity", "Photon sphere", "Event horizon", "Accretion disk"], ans: 2 },
+      { q: "Which protein forms the cytoskeleton's intermediate filaments?", opts: ["Actin", "Tubulin", "Keratin", "Myosin"], ans: 2 },
+      { q: "What is Avogadro's number approximately?", opts: ["6.02×10²¹", "6.02×10²³", "6.02×10²⁵", "6.02×10²⁷"], ans: 1 },
+      { q: "Which law states that pressure and volume are inversely proportional?", opts: ["Charles's Law", "Dalton's Law", "Boyle's Law", "Gay-Lussac's Law"], ans: 2 },
+    ]
+  },
+  history: {
+    easy: [
+      { q: "Who was the first President of the United States?", opts: ["Lincoln", "Jefferson", "Washington", "Adams"], ans: 2 },
+      { q: "In what year did World War I begin?", opts: ["1912", "1914", "1916", "1918"], ans: 1 },
+      { q: "What ancient wonder was located in Alexandria?", opts: ["Colosseum", "Lighthouse", "Pyramid", "Colossus"], ans: 1 },
+      { q: "Who built the Great Wall of China?", opts: ["Mongols", "Chinese emperors", "Japanese", "Koreans"], ans: 1 },
+      { q: "What empire did Julius Caesar rule?", opts: ["Greek", "Egyptian", "Roman", "Ottoman"], ans: 2 },
+      { q: "Who was the first man to walk on the moon?", opts: ["Buzz Aldrin", "Neil Armstrong", "Yuri Gagarin", "John Glenn"], ans: 1 },
+      { q: "In what year did the Berlin Wall fall?", opts: ["1987", "1988", "1989", "1990"], ans: 2 },
+      { q: "Which country was the first to grant women the right to vote?", opts: ["USA", "UK", "France", "New Zealand"], ans: 3 },
+      { q: "What was the name of the ship that sank in 1912?", opts: ["Olympic", "Britannic", "Titanic", "Lusitania"], ans: 2 },
+      { q: "Who was the Egyptian queen who ruled alongside Julius Caesar?", opts: ["Nefertiti", "Hatshepsut", "Cleopatra", "Isis"], ans: 2 },
+    ],
+    medium: [
+      { q: "In which year did the French Revolution begin?", opts: ["1776", "1783", "1789", "1799"], ans: 2 },
+      { q: "Who was the first Emperor of China?", opts: ["Confucius", "Qin Shi Huang", "Han Wudi", "Tang Taizong"], ans: 1 },
+      { q: "What was the primary cause of the Hundred Years' War?", opts: ["Religion", "Trade", "Succession to French throne", "Territory"], ans: 2 },
+      { q: "Which civilization built Machu Picchu?", opts: ["Aztec", "Maya", "Olmec", "Inca"], ans: 3 },
+      { q: "Who led the Cuban Revolution?", opts: ["Che Guevara", "Batista", "Fidel Castro", "Raul Castro"], ans: 2 },
+      { q: "What year was the United Nations founded?", opts: ["1943", "1944", "1945", "1946"], ans: 2 },
+      { q: "Which battle ended Napoleon's reign?", opts: ["Trafalgar", "Borodino", "Leipzig", "Waterloo"], ans: 3 },
+      { q: "Who was the first female Prime Minister of the UK?", opts: ["Barbara Castle", "Margaret Thatcher", "Shirley Williams", "Betty Boothroyd"], ans: 1 },
+      { q: "What was the name of the first artificial satellite?", opts: ["Explorer 1", "Sputnik 1", "Vanguard", "Luna 1"], ans: 1 },
+      { q: "In which year did India gain independence from Britain?", opts: ["1945", "1946", "1947", "1948"], ans: 2 },
+    ],
+    hard: [
+      { q: "What was the name of the peace treaty that ended WWI?", opts: ["Treaty of Paris", "Treaty of Versailles", "Treaty of Ghent", "Treaty of Utrecht"], ans: 1 },
+      { q: "Who was the last Byzantine Emperor?", opts: ["Alexios I", "John VIII", "Constantine XI", "Manuel II"], ans: 2 },
+      { q: "What year did the Ottoman Empire officially dissolve?", opts: ["1919", "1921", "1923", "1925"], ans: 2 },
+      { q: "Which pharaoh is associated with the Amarna Period?", opts: ["Ramesses II", "Tutankhamun", "Akhenaten", "Thutmose III"], ans: 2 },
+      { q: "The Meiji Restoration began in which year?", opts: ["1858", "1863", "1868", "1873"], ans: 2 },
+      { q: "Who was the first ruler to unify the Korean peninsula?", opts: ["Gwanggaeto", "Sejong", "Wang Geon", "Taejo of Joseon"], ans: 2 },
+      { q: "What was the name of the first parliament in history?", opts: ["Roman Senate", "Athenian Agora", "Althing of Iceland", "English Parliament"], ans: 2 },
+      { q: "In which battle did Alexander the Great defeat Darius III?", opts: ["Issus", "Gaugamela", "Granicus", "Hydaspes"], ans: 1 },
+      { q: "What was the primary language of the Roman Empire in the East?", opts: ["Latin", "Aramaic", "Greek", "Coptic"], ans: 2 },
+      { q: "Who was the first Mughal Emperor of India?", opts: ["Akbar", "Babur", "Humayun", "Shah Jahan"], ans: 1 },
+    ]
+  },
+  tech: {
+    easy: [
+      { q: "What does 'CPU' stand for?", opts: ["Central Processing Unit", "Computer Power Unit", "Core Processing Utility", "Central Program Unit"], ans: 0 },
+      { q: "What does 'www' stand for?", opts: ["World Wide Web", "World Web Works", "Wide Web World", "Web World Wide"], ans: 0 },
+      { q: "Which company created the iPhone?", opts: ["Samsung", "Google", "Apple", "Microsoft"], ans: 2 },
+      { q: "What does 'USB' stand for?", opts: ["Universal System Bus", "Universal Serial Bus", "Unified Serial Bus", "Universal Signal Bus"], ans: 1 },
+      { q: "What is the most popular programming language worldwide?", opts: ["Python", "JavaScript", "Java", "C++"], ans: 1 },
+      { q: "What does 'RAM' stand for?", opts: ["Random Access Memory", "Read Access Module", "Runtime Active Memory", "Rapid Application Mode"], ans: 0 },
+      { q: "Which company made Windows?", opts: ["Apple", "IBM", "Google", "Microsoft"], ans: 3 },
+      { q: "What does 'AI' stand for?", opts: ["Automated Internet", "Artificial Intelligence", "Advanced Interface", "Autonomous Integration"], ans: 1 },
+      { q: "What is the name of the world's largest social network?", opts: ["Twitter", "Instagram", "Facebook", "TikTok"], ans: 2 },
+      { q: "What does 'HTML' stand for?", opts: ["HyperText Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Links", "Home Tool Markup Language"], ans: 0 },
+    ],
+    medium: [
+      { q: "What does 'HTTP' stand for?", opts: ["HyperText Transfer Protocol", "High Traffic Transfer Processor", "HyperText Transmission Provider", "Host Transport Protocol"], ans: 0 },
+      { q: "Which data structure uses LIFO ordering?", opts: ["Queue", "Linked List", "Stack", "Tree"], ans: 2 },
+      { q: "What is the binary representation of decimal 10?", opts: ["1000", "1010", "1100", "0110"], ans: 1 },
+      { q: "Which protocol assigns IP addresses automatically?", opts: ["DNS", "DHCP", "FTP", "SMTP"], ans: 1 },
+      { q: "What does 'SQL' stand for?", opts: ["Structured Query Language", "Simple Query Language", "Standard Query Logic", "Sequential Query Language"], ans: 0 },
+      { q: "Which sorting algorithm has average O(n log n) complexity?", opts: ["Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort"], ans: 3 },
+      { q: "What does 'REST' stand for in REST API?", opts: ["Remote Execution of State Transfer", "Representational State Transfer", "Routing Environment for Server Tasks", "Resource Exchange and State Transfer"], ans: 1 },
+      { q: "Which company developed the Android OS?", opts: ["Apple", "Samsung", "Google", "Microsoft"], ans: 2 },
+      { q: "What is the default port for HTTPS?", opts: ["80", "21", "443", "8080"], ans: 2 },
+      { q: "In which year was the first iPhone released?", opts: ["2005", "2006", "2007", "2008"], ans: 2 },
+    ],
+    hard: [
+      { q: "What is the time complexity of binary search?", opts: ["O(n)", "O(log n)", "O(n²)", "O(n log n)"], ans: 1 },
+      { q: "Which cryptographic algorithm is used in Bitcoin mining?", opts: ["MD5", "SHA-1", "SHA-256", "RSA"], ans: 2 },
+      { q: "What does 'CAP theorem' stand for?", opts: ["Consistency, Availability, Partition tolerance", "Caching, Async, Performance", "Core, API, Processing", "Compute, Access, Protocol"], ans: 0 },
+      { q: "Which design pattern separates an object's interface from its implementation?", opts: ["Singleton", "Observer", "Bridge", "Facade"], ans: 2 },
+      { q: "What is the maximum value of an unsigned 8-bit integer?", opts: ["127", "255", "511", "1023"], ans: 1 },
+      { q: "Which protocol is used for secure key exchange over an insecure channel?", opts: ["RSA", "AES", "Diffie-Hellman", "SHA-256"], ans: 2 },
+      { q: "What does 'CORS' stand for?", opts: ["Cross-Origin Resource Sharing", "Cross-Object Routing System", "Core Object Resource Service", "Central Origin Request Schema"], ans: 0 },
+      { q: "In machine learning, what is 'overfitting'?", opts: ["Model too simple for data", "Model performs well only on training data", "Model has too few parameters", "Model trained for too short a time"], ans: 1 },
+      { q: "Which data structure is used by most modern databases for indexing?", opts: ["Hash Table", "AVL Tree", "B-Tree", "Red-Black Tree"], ans: 2 },
+      { q: "What is 'idempotency' in REST APIs?", opts: ["Same request always returns same result", "Request can be made multiple times safely", "API has no side effects", "Request requires authentication"], ans: 1 },
+    ]
+  }
+};
+
+const TIMER_SECONDS = { easy: 20, medium: 15, hard: 10 };
+
+let selectedCat = 'general';
+let selectedDiff = 'easy';
+let questions = [];
+let currentQ = 0;
+let score = 0;
+let answers = [];
+let timerInterval = null;
+let timeLeft = 15;
+let questionStartTime = 0;
+let totalTime = 0;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  el.classList.remove('active');
+  void el.offsetWidth;
+  el.classList.add('active');
+}
+
+function selectCat(el) {
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCat = el.dataset.cat;
+}
+
+function selectDiff(el) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedDiff = el.dataset.diff;
+}
+
+function startQuiz() {
+  const pool = QUESTIONS[selectedCat][selectedDiff];
+  questions = [...pool].sort(() => Math.random() - 0.5).slice(0, 10);
+  currentQ = 0;
+  score = 0;
+  answers = [];
+  totalTime = 0;
+  showScreen('quizScreen');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  const letters = ['A', 'B', 'C', 'D'];
+  const catNames = { general: 'General', science: 'Science', history: 'History', tech: 'Technology' };
+
+  document.getElementById('qNum').textContent = currentQ + 1;
+  document.getElementById('qTotal').textContent = questions.length;
+  document.getElementById('liveScore').textContent = score;
+  document.getElementById('progressFill').style.width = ((currentQ + 1) / questions.length * 100) + '%';
+  document.getElementById('qTag').textContent = `${catNames[selectedCat]} · ${selectedDiff.charAt(0).toUpperCase() + selectedDiff.slice(1)}`;
+  document.getElementById('questionText').textContent = q.q;
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span>${opt}<span class="opt-icon"></span>`;
+    btn.onclick = () => selectAnswer(i);
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('feedbackBar').className = 'feedback-bar';
+  document.getElementById('nextBtn').className = 'next-btn';
+  startTimer();
+  questionStartTime = Date.now();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = TIMER_SECONDS[selectedDiff];
+  const el = document.getElementById('timer');
+  const val = document.getElementById('timerVal');
+
+  function tick() {
+    val.textContent = timeLeft;
+    el.className = 'timer';
+    if (timeLeft <= 5) el.classList.add('danger');
+    else if (timeLeft <= 8) el.classList.add('warning');
+
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeOut();
+      return;
+    }
+    timeLeft--;
+  }
+
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+
+function timeOut() {
+  const q = questions[currentQ];
+  disableOptions();
+  markCorrect(q.ans);
+  showFeedback(false, "⏱ Time's up! The answer was: " + q.opts[q.ans]);
+  document.getElementById('nextBtn').className = 'next-btn visible';
+  answers.push({ q: q.q, correct: false, time: TIMER_SECONDS[selectedDiff] });
+  totalTime += TIMER_SECONDS[selectedDiff];
+}
+
+function selectAnswer(idx) {
+  clearInterval(timerInterval);
+  const elapsed = (Date.now() - questionStartTime) / 1000;
+  totalTime += elapsed;
+
+  const q = questions[currentQ];
+  const isCorrect = idx === q.ans;
+  const options = document.querySelectorAll('.option-btn');
+
+  options[idx].classList.add(isCorrect ? 'correct' : 'wrong');
+  options[idx].querySelector('.opt-icon').textContent = isCorrect ? '✓' : '✗';
+
+  if (!isCorrect) markCorrect(q.ans);
+
+  disableOptions();
+
+  if (isCorrect) {
+    score++;
+    document.getElementById('liveScore').textContent = score;
+    showFeedback(true, '✓ Correct! Well done.');
+  } else {
+    showFeedback(false, '✗ Incorrect. The right answer was: ' + q.opts[q.ans]);
+  }
+
+  document.getElementById('nextBtn').className = 'next-btn visible';
+  answers.push({ q: q.q, correct: isCorrect, time: Math.round(elapsed) });
+}
+
+function markCorrect(ans) {
+  const options = document.querySelectorAll('.option-btn');
+  options[ans].classList.add('correct');
+  options[ans].querySelector('.opt-icon').textContent = '✓';
+}
+
+function disableOptions() {
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+}
+
+function showFeedback(correct, msg) {
+  const fb = document.getElementById('feedbackBar');
+  fb.textContent = msg;
+  fb.className = 'feedback-bar ' + (correct ? 'correct' : 'wrong');
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showResults() {
+  showScreen('resultsScreen');
+  const pct = Math.round((score / questions.length) * 100);
+  const wrong = questions.length - score;
+  const avgTime = Math.round(totalTime / questions.length);
+
+  // Trophy & message
+  let trophy, title, sub;
+  if (pct === 100) { trophy = '🏆'; title = 'Perfect!'; sub = 'Absolutely flawless. Legendary.'; }
+  else if (pct >= 80) { trophy = '🥇'; title = 'Excellent!'; sub = 'You clearly know your stuff.'; }
+  else if (pct >= 60) { trophy = '🥈'; title = 'Good Job!'; sub = 'Solid performance. Keep it up!'; }
+  else if (pct >= 40) { trophy = '🥉'; title = 'Not Bad!'; sub = 'Room to grow. Try again!'; }
+  else { trophy = '💪'; title = 'Keep Going!'; sub = 'Every expert was once a beginner.'; }
+
+  document.getElementById('trophyEmoji').textContent = trophy;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent = sub;
+  document.getElementById('statCorrect').textContent = score;
+  document.getElementById('statWrong').textContent = wrong;
+  document.getElementById('statTime').textContent = avgTime + 's';
+  document.getElementById('ringPct').textContent = pct + '%';
+
+  // Ring animation
+  const circumference = 364.4;
+  const offset = circumference - (pct / 100) * circumference;
+  setTimeout(() => {
+    document.getElementById('ringFill').style.strokeDashoffset = offset;
+  }, 200);
+
+  // Color ring by score
+  const ringFill = document.getElementById('ringFill');
+  if (pct >= 80) ringFill.style.stroke = 'var(--correct)';
+  else if (pct >= 50) ringFill.style.stroke = 'url(#grad)';
+  else ringFill.style.stroke = 'var(--wrong)';
+
+  // History
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+  answers.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `
+      <span class="h-dot ${a.correct ? 'c' : 'w'}"></span>
+      <span class="h-text">${a.q}</span>
+      <span class="h-badge ${a.correct ? 'c' : 'w'}">${a.correct ? '✓' : '✗'}</span>
+    `;
+    list.appendChild(div);
+  });
+}
+</script>
+</body>
+</html>
